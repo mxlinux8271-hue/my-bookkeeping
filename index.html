@@ -97,15 +97,15 @@
             .then(response => response.json())
             .then(data => {
                 console.log("從後端收到的資料：", data);
-               
+                
                 const records = data.records;
                 let monthTotal = 0;
                 let yearTotal = 0;
-               
+                
                 const now = new Date();
                 const currentYear = now.getFullYear();
                 const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-               
+                
                 document.getElementById('currentMonthTitle').innerText = `${currentYear}年${currentMonth}月支出`;
 
                 if (!records || records.length <= 1) {
@@ -116,10 +116,10 @@
                 // 從第二列開始（跳過標題列）
                 for (let i = 1; i < records.length; i++) {
                     let row = records[i];
-                    if (!row[0] || row[2] === undefined) continue;
+                    if (!row[0] || row[2] === undefined) continue; 
 
                     let rawDate = String(row[0]).trim();
-                    let rowDateStr = rawDate.split('T')[0].replaceAll('/', '-');
+                    let rowDateStr = rawDate.split('T')[0].replaceAll('/', '-'); 
                     let rowAmount = Number(row[2]) || 0;
 
                     if (rowDateStr.startsWith(`${currentYear}-${currentMonth}`)) {
@@ -154,7 +154,7 @@
         // 提交記帳
         document.getElementById('expenseForm').addEventListener('submit', function(e) {
             e.preventDefault();
-           
+            
             const formData = {
                 date: document.getElementById('date').value,
                 category: document.getElementById('category').value,
