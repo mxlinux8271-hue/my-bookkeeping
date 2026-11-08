@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我的雲端記帳本</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f9f9f9; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #333; font-size: 1.2em; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; }
+        .form-group { margin-bottom: 12px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select { width: 100%; padding: 10px; box-sizing: border-box; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
+        button { width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        .stats-box { display: flex; justify-content: space-between; gap: 10px; }
+        .stat-card { flex: 1; background: #e8f5e9; padding: 15px; border-radius: 6px; text-align: center; }
+        .stat-card h3 { margin: 0 0 5px 0; font-size: 0.9em; color: #2e7d32; }
+        .stat-card p { margin: 0; font-size: 1.4em; font-weight: bold; color: #1b5e20; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f1f1f1; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center; color: #2c3e50;">☁️ 我的雲端記帳本</h1>
+
+    <!-- 統計總覽卡片 -->
+    <div class="card">
+        <h2>📊 數據總覽</h2>
+        <div class="stats-box">
+            <div class="stat-card">
+                <h3 id="currentMonthTitle">本月支出</h3>
+                <p id="monthTotal">NT$ 0</p>
+            </div>
+            <div class="stat-card">
+                <h3>今年總支出</h3>
+                <p id="yearTotal">NT$ 0</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 記帳表單 -->
+    <div class="card">
+        <h2>✍️ 新增記帳</h2>
+        <form id="expenseForm">
+            <div class="form-group">
+                <label for="date">日期：</label>
+                <input type="date" id="date" required>
+            </div>
+            <div class="form-group">
+                <label for="category">類別：</label>
+                <select id="category">
+                    <option value="飲食">飲食</option>
+                    <option value="交通">交通</option>
+                    <option value="購物">購物</option>
+                    <option value="娛樂">娛樂</option>
+                    <option value="醫療">醫療</option>
+                    <option value="菸酒">菸酒</option>
+                    <option value="旅遊">旅遊</option>
+                    <option value="水電費">水電費</option>
+                    <option value="日用品">日用品</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="amount">金額：</label>
+                <input type="number" id="amount" required placeholder="請輸入金額">
+            </div>
+            <div class="form-group">
+                <label for="memo">備註：</label>
+                <input type="text" id="memo" placeholder="例如：午餐便當">
+            </div>
+            <button type="submit">送出記帳</button>
+        </form>
+    </div>
+
+    <!-- 固定支出清單預覽 -->
+
+    <!-- 固定支出清單預覽 end -->
+
+    <script>
+        // 填入你最新的 GAS 網頁應用程式網址
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxtPAGALMSLPgxFNGh1sKTx0ruZooS5B2cla9kPvW7e4rTi82Gjcif5LYjdXKAaj2s/exec';
+
+        document.getElementById('date').valueAsDate = new Date();
+
+        // 載入資料並計算統計
+        function loadData() {
+            // 改用 POST 發送 action: "getData" 請求，徹底避開 CORS 限制
+            fetch(scriptURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: "getData" })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log("從後端收到的資料：", data);
+               
+                const records = data.records;
+                let monthTotal = 0;
+                let yearTotal = 0;
+               
+                const now = new Date();
+                const currentYear = now.getFullYear();
+                const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+               
+                document.getElementById('currentMonthTitle').innerText = `${currentYear}年${currentMonth}月支出`;
+
+                if (!records || records.length <= 1) {
+                    console.log("目前沒有記帳資料列");
+                    return;
+                }
+
+                // 從第二列開始（跳過標題列）
+                for (let i = 1; i < records.length; i++) {
+                    let row = records[i];
+                    if (!row[0] || row[2] === undefined) continue;
+
+                    let rawDate = String(row[0]).trim();
+                    let rowDateStr = rawDate.split('T')[0].replaceAll('/', '-');
+                    let rowAmount = Number(row[2]) || 0;
+
+                    if (rowDateStr.startsWith(`${currentYear}-${currentMonth}`)) {
+                        monthTotal += rowAmount;
+                    }
+                    if (rowDateStr.startsWith(`${currentYear}`)) {
+                        yearTotal += rowAmount;
+                    }
+                }
+
+                document.getElementById('monthTotal').innerText = `NT$ ${monthTotal.toLocaleString()}`;
+                document.getElementById('yearTotal').innerText = `NT$ ${yearTotal.toLocaleString()}`;
+
+                // 2. 渲染固定支出表格
+                //const fixedExpenses = data.fixedExpenses;
+                //const fixedTableBody = document.querySelector('#fixedTable tbody');
+                //fixedTableBody.innerHTML = '';
+
+                //if (!fixedExpenses || fixedExpenses.length <= 1) {
+                //    fixedTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">尚未設定固定支出</td></tr>`;
+                //} else {
+                //    for (let i = 1; i < fixedExpenses.length; i++) {
+                //        let fRow = fixedExpenses[i];
+                //        let tr = document.createElement('tr');
+                //        tr.innerHTML = `<td>${fRow[0] || ''}</td><td>${fRow[1] || ''}</td><td>${fRow[2] || ''}</td><td>${fRow[3] || ''}</td>`;
+                //        fixedTableBody.appendChild(tr);
+                //    }
+                //}
+            })
+            .catch(err => console.error('讀取資料失敗', err));
+        }
+        // 提交記帳
+        document.getElementById('expenseForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+           
+            const formData = {
+                date: document.getElementById('date').value,
+                category: document.getElementById('category').value,
+                amount: document.getElementById('amount').value,
+                memo: document.getElementById('memo').value
+            };
+
+            fetch(scriptURL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(formData)
+            })
+            .then(() => {
+                alert('記帳成功！');
+                document.getElementById('amount').value = '';
+                document.getElementById('memo').value = '';
+                setTimeout(loadData, 1500); // 重新載入統計
+            })
+            .catch(error => alert('發生錯誤：' + error));
+        });
+
+        // 網頁開啟時自動載入
+        loadData();
+    </script>
+</body>
+</html>
