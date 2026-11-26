@@ -7,19 +7,25 @@
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f9f9f9; }
         .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        h2 { color: #333; font-size: 1.2em; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; }
+        h2 { color: #333; font-size: 1.2em; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-top: 0; }
         .form-group { margin-bottom: 12px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input, select { width: 100%; padding: 10px; box-sizing: border-box; font-size: 16px; border: 1px solid #ddd; border-radius: 4px; }
-        button { width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; font-size: 16px; border-radius: 4px; cursor: pointer; }
-        button:hover { background-color: #45a049; }
+        .btn-submit { width: 100%; padding: 12px; background-color: #4CAF50; color: white; border: none; font-size: 16px; border-radius: 4px; cursor: pointer; }
+        .btn-submit:hover { background-color: #45a049; }
+        .btn-sm { padding: 6px 12px; font-size: 14px; border: 1px solid #ccc; background-color: #fff; color: #333; border-radius: 4px; cursor: pointer; width: auto; }
+        .btn-sm:hover { background-color: #f0f0f0; }
+        .btn-del { color: #d9534f; border-color: #d9534f; }
+        .btn-del:hover { background-color: #fdf2f2; }
+        .btn-save { background-color: #28a745; color: #fff; border-color: #28a745; }
+        .btn-save:hover { background-color: #218838; }
         .stats-box { display: flex; justify-content: space-between; gap: 10px; }
         .stat-card { flex: 1; background: #e8f5e9; padding: 15px; border-radius: 6px; text-align: center; }
         .stat-card h3 { margin: 0 0 5px 0; font-size: 0.9em; color: #2e7d32; }
         .stat-card p { margin: 0; font-size: 1.4em; font-weight: bold; color: #1b5e20; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f1f1f1; }
+        .record-item { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+        .modal-box { background: #fff; width: 90%; max-width: 360px; margin: 15% auto; padding: 20px; border-radius: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -73,57 +79,61 @@
                 <label for="memo">備註：</label>
                 <input type="text" id="memo" placeholder="例如：午餐便當">
             </div>
-            <button type="submit">送出記帳</button>
+            <button type="submit" class="btn-submit">送出記帳</button>
         </form>
     </div>
 
+    <!-- 本月明細列表區塊 -->
+    <div class="card" id="month-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-bottom: 12px;">
+            <h2 style="border: none; padding: 0; margin: 0;">📅 本月明細 (<span id="current-ym"></span>)</h2>
+            <button type="button" class="btn-sm" onclick="refreshAll()">🔄 重新整理</button>
+        </div>
+        <div id="month-summary" style="font-weight: bold; margin-bottom: 12px; color: #2c3e50;">
+            本月總支出：0 元
+        </div>
+        <div id="records-list">載入中...</div>
+    </div>
 
-<!-- 明細列表區塊 -->    
-<hr style="margin: 24px 0;">
-
-<!-- 本月明細列表區塊 -->
-<div id="month-section">
-  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-    <h3 style="margin: 0;">📅 本月明細 (<span id="current-ym"></span>)</h3>
-    <button type="button" onclick="loadMonthRecords()">🔄 重新整理</button>
-  </div>
-  <div id="month-summary" style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">
-    本月總支出：0 元
-  </div>
-  <div id="records-list">載入中...</div>
-</div>
-
-<!-- 修改資料彈出視窗 -->
-<div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
-  <div style="background:#fff; width:90%; max-width:360px; margin:15% auto; padding:20px; border-radius:8px;">
-    <h4 style="margin-top:0;">✏️ 修改消費紀錄</h4>
-    <input type="hidden" id="edit-rowIndex">
-    <div style="margin-bottom:10px;">
-      <label>日期：</label><br>
-      <input type="date" id="edit-date" style="width:100%; padding:6px;">
+    <!-- 修改資料彈出視窗 -->
+    <div id="edit-modal" class="modal-overlay">
+        <div class="modal-box">
+            <h3 style="margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 8px;">✏️ 修改消費紀錄</h3>
+            <input type="hidden" id="edit-rowIndex">
+            <div class="form-group">
+                <label for="edit-date">日期：</label>
+                <input type="date" id="edit-date">
+            </div>
+            <div class="form-group">
+                <label for="edit-category">類別：</label>
+                <select id="edit-category">
+                    <option value="飲食">飲食</option>
+                    <option value="交通">交通</option>
+                    <option value="購物">購物</option>
+                    <option value="娛樂">娛樂</option>
+                    <option value="醫療">醫療</option>
+                    <option value="菸酒">菸酒</option>
+                    <option value="家電">家電</option>
+                    <option value="旅遊">旅遊</option>
+                    <option value="水電費">水電費</option>
+                    <option value="日用品">日用品</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="edit-amount">金額：</label>
+                <input type="number" id="edit-amount">
+            </div>
+            <div class="form-group">
+                <label for="edit-memo">備註：</label>
+                <input type="text" id="edit-memo">
+            </div>
+            <div style="text-align: right; display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px;">
+                <button type="button" class="btn-sm" onclick="closeEditModal()">取消</button>
+                <button type="button" class="btn-sm btn-save" onclick="submitEdit()">儲存修改</button>
+            </div>
+        </div>
     </div>
-    <div style="margin-bottom:10px;">
-      <label>類別：</label><br>
-      <input type="text" id="edit-category" style="width:100%; padding:6px;">
-    </div>
-    <div style="margin-bottom:10px;">
-      <label>金額：</label><br>
-      <input type="number" id="edit-amount" style="width:100%; padding:6px;">
-    </div>
-    <div style="margin-bottom:14px;">
-      <label>備註：</label><br>
-      <input type="text" id="edit-memo" style="width:100%; padding:6px;">
-    </div>
-    <div style="text-align:right;">
-      <button type="button" onclick="closeEditModal()">取消</button>
-      <button type="button" onclick="submitEdit()" style="background:#28a745; color:#fff; border:none; padding:6px 14px; border-radius:4px;">儲存修改</button>
-    </div>
-  </div>
-</div>
-<!-- 明細列表區塊 -->    
-    <!-- 固定支出清單預覽 -->
-
-    <!-- 固定支出清單預覽 end -->
 
     <script>
         // 填入你最新的 GAS 網頁應用程式網址
@@ -131,9 +141,21 @@
 
         document.getElementById('date').valueAsDate = new Date();
 
+        function getCurrentYearMonth() {
+            const now = new Date();
+            const y = now.getFullYear();
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+            return `${y}-${m}`;
+        }
+
+        // 同步重新載入上方總覽與下方本月明細
+        function refreshAll() {
+            loadData();
+            loadMonthRecords();
+        }
+
         // 載入資料並計算統計
         function loadData() {
-            // 改用 POST 發送 action: "getData" 請求，徹底避開 CORS 限制
             fetch(scriptURL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -141,8 +163,6 @@
             })
             .then(response => response.json())
             .then(data => {
-                console.log("從後端收到的資料：", data);
-                
                 const records = data.records;
                 let monthTotal = 0;
                 let yearTotal = 0;
@@ -153,12 +173,8 @@
                 
                 document.getElementById('currentMonthTitle').innerText = `${currentYear}年${currentMonth}月支出`;
 
-                if (!records || records.length <= 1) {
-                    console.log("目前沒有記帳資料列");
-                    return;
-                }
+                if (!records || records.length <= 1) return;
 
-                // 從第二列開始（跳過標題列）
                 for (let i = 1; i < records.length; i++) {
                     let row = records[i];
                     if (!row[0] || row[2] === undefined) continue; 
@@ -177,30 +193,16 @@
 
                 document.getElementById('monthTotal').innerText = `NT$ ${monthTotal.toLocaleString()}`;
                 document.getElementById('yearTotal').innerText = `NT$ ${yearTotal.toLocaleString()}`;
-
-                // 2. 渲染固定支出表格
-                //const fixedExpenses = data.fixedExpenses;
-                //const fixedTableBody = document.querySelector('#fixedTable tbody');
-                //fixedTableBody.innerHTML = '';
-
-                //if (!fixedExpenses || fixedExpenses.length <= 1) {
-                //    fixedTableBody.innerHTML = `<tr><td colspan="4" style="text-align:center;">尚未設定固定支出</td></tr>`;
-                //} else {
-                //    for (let i = 1; i < fixedExpenses.length; i++) {
-                //        let fRow = fixedExpenses[i];
-                //        let tr = document.createElement('tr');
-                //        tr.innerHTML = `<td>${fRow[0] || ''}</td><td>${fRow[1] || ''}</td><td>${fRow[2] || ''}</td><td>${fRow[3] || ''}</td>`;
-                //        fixedTableBody.appendChild(tr);
-                //    }
-                //}
             })
             .catch(err => console.error('讀取資料失敗', err));
         }
+
         // 提交記帳
         document.getElementById('expenseForm').addEventListener('submit', function(e) {
             e.preventDefault();
             
             const formData = {
+                action: "add",
                 date: document.getElementById('date').value,
                 category: document.getElementById('category').value,
                 amount: document.getElementById('amount').value,
@@ -217,133 +219,135 @@
                 alert('記帳成功！');
                 document.getElementById('amount').value = '';
                 document.getElementById('memo').value = '';
-                setTimeout(loadData, 1500); // 重新載入統計
+                setTimeout(refreshAll, 1500);
             })
             .catch(error => alert('發生錯誤：' + error));
         });
 
-//new
-// 取得當下年月，格式 YYYY-MM
-function getCurrentYearMonth() {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-}
+        // 讀取本月明細
+        async function loadMonthRecords() {
+            const ym = getCurrentYearMonth();
+            document.getElementById('current-ym').textContent = ym;
+            const listDiv = document.getElementById('records-list');
+            listDiv.innerHTML = '讀取中...';
 
-// 讀取本月明細
-async function loadMonthRecords() {
-  const ym = getCurrentYearMonth();
-  document.getElementById('current-ym').textContent = ym;
-  const listDiv = document.getElementById('records-list');
-  listDiv.innerHTML = '讀取中...';
+            try {
+                const res = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getMonth', yearMonth: ym })
+                });
+                const data = await res.json();
 
-  try {
-    const res = await fetch(scriptURL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'getMonth', yearMonth: ym })
-    });
-    const data = await res.json();
+                if (data.status === 'success') {
+                    renderRecords(data.records);
+                } else {
+                    listDiv.innerHTML = '讀取失敗：' + data.message;
+                }
+            } catch (err) {
+                listDiv.innerHTML = '連線錯誤，請確認網路或 GAS 是否已部署新版本';
+            }
+        }
 
-    if (data.status === 'success') {
-      renderRecords(data.records);
-    } else {
-      listDiv.innerHTML = '讀取失敗：' + data.message;
-    }
-  } catch (err) {
-    listDiv.innerHTML = '連線錯誤，請確認網路或部署網址';
-  }
-}
+        // 渲染明細卡片與加總
+        function renderRecords(records) {
+            const listDiv = document.getElementById('records-list');
+            const summaryDiv = document.getElementById('month-summary');
 
-// 渲染明細卡片與加總
-function renderRecords(records) {
-  const listDiv = document.getElementById('records-list');
-  const summaryDiv = document.getElementById('month-summary');
+            if (!records || records.length === 0) {
+                summaryDiv.textContent = '本月總支出：0 元';
+                listDiv.innerHTML = '<p style="color:#888;">本月尚無消費紀錄</p>';
+                return;
+            }
 
-  if (!records || records.length === 0) {
-    summaryDiv.textContent = '本月總支出：0 元';
-    listDiv.innerHTML = '<p style="color:#888;">本月尚無消費紀錄</p>';
-    return;
-  }
+            let total = 0;
+            let html = '';
 
-  let total = 0;
-  let html = '';
+            records.forEach(item => {
+                total += item.amount;
+                const safeCat = item.category.replace(/'/g, "\\'");
+                const safeMemo = item.memo.replace(/'/g, "\\'");
 
-  records.forEach(item => {
-    total += item.amount;
-    // 將單引號轉義避免 onclick 屬性出錯
-    const safeCat = item.category.replace(/'/g, "\\'");
-    const safeMemo = item.memo.replace(/'/g, "\\'");
+                html += `
+                    <div class="record-item">
+                        <div>
+                            <div style="font-size:13px; color:#666;">${item.date} · <strong>${item.category}</strong></div>
+                            <div style="font-size:16px; font-weight:bold; margin:2px 0;">NT$ ${item.amount.toLocaleString()}</div>
+                            <div style="font-size:13px; color:#444;">${item.memo}</div>
+                        </div>
+                        <div style="display:flex; gap:6px; flex-shrink:0;">
+                            <button type="button" class="btn-sm" onclick="openEditModal(${item.rowIndex}, '${item.date}', '${safeCat}', ${item.amount}, '${safeMemo}')">修改</button>
+                            <button type="button" class="btn-sm btn-del" onclick="deleteRecord(${item.rowIndex})">刪除</button>
+                        </div>
+                    </div>
+                `;
+            });
 
-    html += `
-      <div style="border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <div style="font-size:13px; color:#666;">${item.date} · <strong>${item.category}</strong></div>
-          <div style="font-size:16px; font-weight:bold; margin:2px 0;">$${item.amount}</div>
-          <div style="font-size:13px; color:#444;">${item.memo}</div>
-        </div>
-        <div style="display:flex; gap:6px;">
-          <button type="button" onclick="openEditModal(${item.rowIndex}, '${item.date}', '${safeCat}', ${item.amount}, '${safeMemo}')">修改</button>
-          <button type="button" onclick="deleteRecord(${item.rowIndex})" style="color:#d9534f;">刪除</button>
-        </div>
-      </div>
-    `;
-  });
+            summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
+            listDiv.innerHTML = html;
+        }
 
-  summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
-  listDiv.innerHTML = html;
-}
+        // 開啟修改視窗（若試算表有自訂類別不在預設清單中，自動補入選項避免顯示空白）
+        function openEditModal(rowIndex, date, category, amount, memo) {
+            document.getElementById('edit-rowIndex').value = rowIndex;
+            document.getElementById('edit-date').value = date;
 
-// 開啟修改視窗
-function openEditModal(rowIndex, date, category, amount, memo) {
-  document.getElementById('edit-rowIndex').value = rowIndex;
-  document.getElementById('edit-date').value = date;
-  document.getElementById('edit-category').value = category;
-  document.getElementById('edit-amount').value = amount;
-  document.getElementById('edit-memo').value = memo;
-  document.getElementById('edit-modal').style.display = 'block';
-}
+            const catSelect = document.getElementById('edit-category');
+            const exists = Array.from(catSelect.options).some(opt => opt.value === category);
+            if (!exists && category) {
+                const tempOpt = document.createElement('option');
+                tempOpt.value = category;
+                tempOpt.text = category;
+                catSelect.add(tempOpt);
+            }
+            catSelect.value = category;
 
-function closeEditModal() {
-  document.getElementById('edit-modal').style.display = 'none';
-}
+            document.getElementById('edit-amount').value = amount;
+            document.getElementById('edit-memo').value = memo;
+            document.getElementById('edit-modal').style.display = 'block';
+        }
 
-// 送出修改
-async function submitEdit() {
-  const payload = {
-    action: 'update',
-    rowIndex: document.getElementById('edit-rowIndex').value,
-    date: document.getElementById('edit-date').value,
-    category: document.getElementById('edit-category').value,
-    amount: document.getElementById('edit-amount').value,
-    memo: document.getElementById('edit-memo').value
-  };
+        function closeEditModal() {
+            document.getElementById('edit-modal').style.display = 'none';
+        }
 
-  closeEditModal();
-  document.getElementById('records-list').innerHTML = '更新中...';
+        // 送出修改
+        async function submitEdit() {
+            const payload = {
+                action: 'update',
+                rowIndex: document.getElementById('edit-rowIndex').value,
+                date: document.getElementById('edit-date').value,
+                category: document.getElementById('edit-category').value,
+                amount: document.getElementById('edit-amount').value,
+                memo: document.getElementById('edit-memo').value
+            };
 
-  await fetch(scriptURL, { method: 'POST', body: JSON.stringify(payload) });
-  loadMonthRecords(); // 更新完重新載入列表
-}
+            closeEditModal();
+            document.getElementById('records-list').innerHTML = '更新中...';
 
-// 刪除紀錄
-async function deleteRecord(rowIndex) {
-  if (!confirm('確定要刪除這筆消費紀錄嗎？')) return;
-  document.getElementById('records-list').innerHTML = '刪除中...';
+            await fetch(scriptURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            });
+            refreshAll();
+        }
 
-  await fetch(scriptURL, {
-    method: 'POST',
-    body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
-  });
-  loadMonthRecords(); // 刪除後重新重新整理列表（確保後續 rowIndex 同步更新）
-}
+        // 刪除紀錄
+        async function deleteRecord(rowIndex) {
+            if (!confirm('確定要刪除這筆消費紀錄嗎？')) return;
+            document.getElementById('records-list').innerHTML = '刪除中...';
 
-// 網頁開啟時自動載入本月明細
-window.addEventListener('DOMContentLoaded', loadMonthRecords);
-//new
-        
-        // 網頁開啟時自動載入
-        loadData();
+            await fetch(scriptURL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+            });
+            refreshAll();
+        }
+
+        // 網頁開啟時同步載入數據總覽與本月明細
+        window.addEventListener('DOMContentLoaded', refreshAll);
     </script>
 </body>
 </html>
