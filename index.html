@@ -105,6 +105,16 @@
         </div>
     </div>
 
+    <div class="card">
+        <h2>📥 手機條碼明細一鍵匯入</h2>
+        <div class="form-group">
+            <label for="csvFile">選擇財政部下載的 CSV 檔案：</label>
+            <input type="file" id="csvFile" accept=".csv,text/csv">
+        </div>
+        <button type="button" class="btn-submit" onclick="handleCsvImport()">一鍵解析並匯入</button>
+        <div id="importStatus" style="margin-top: 10px; font-size: 14px; color: #2e7d32;"></div>
+    </div>
+    
     <!-- ==================== 頁面 2：消費統計表 ==================== -->
     <div id="page-stats" class="page-view">
         <div class="card">
@@ -495,6 +505,116 @@
             refreshAll();
         }
 
+// 依店家名稱自動分類（沿用你的關鍵字規則）
+function detectCategory(storeName) {
+    if (/7-11|統一超商|全家|萊爾富|OK|麥當勞|星巴克|餐|食/.test(storeName)) return "飲食";
+    if (/中油|台塑|加油|高鐵|台鐵|捷運|停車|Uber|悠遊卡/.test(storeName)) return "交通";
+    if (/KTV/.test(storeName)) return "娛樂";
+    if (/菸|酒/.test(storeName)) return "菸酒";
+    if (/藥局|診所|醫院/.test(storeName)) return "醫療";
+    if (/機票/.test(storeName)) return "旅遊";
+    if (/飲料|咖啡|三商/.test(storeName)) return "飲料";
+    if (/便當/.test(storeName)) return "餐點";
+    if (/尊信/.test(storeName)) return "房租";
+    if (/中華|台灣大哥大|遠傳/.test(storeName)) return "通訊";
+    if (/責任險/.test(storeName)) return "車險";
+    if (/自來水|電力/.test(storeName)) return "水電費";
+    if (/小北|鴻流/.test(storeName)) return "日用品";
+    if (/勞健保/.test(storeName)) return "勞健保費";
+    if (/富邦保險/.test(storeName)) return "富邦保費";
+    if (/全聯|家樂福|大潤發|寶雅|屈臣氏|康是美|蝦皮|露天|momo/.test(storeName)) return "購物";
+    return "其他";
+}
+
+// 解析單行 CSV（支援雙引號包覆欄位）
+function parseCsvLine(line) {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') {
+            inQuotes = !inQuotes;
+        } else if (ch === ',' && !inQuotes) {
+            result.push(current.trim());
+            current = '';
+        } else {
+            current += ch;
+        }
+    }
+    result.push(current.trim());
+    return result;
+}
+
+// 讀取 CSV 並送出匯入
+async function handleCsvImport() {
+    const fileInput = document.getElementById('csvFile');
+    const statusEl = document.getElementById('importStatus');
+    if (!fileInput.files || fileInput.files.length === 0) {
+        alert('請先選擇 CSV 檔案！');
+        return;
+    }
+
+    statusEl.textContent = '正在解析 CSV 檔案...';
+    const text = await fileInput.files[0].text();
+    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+    if (lines.length <= 1) {
+        statusEl.textContent = 'CSV 檔案內沒有可匯入的明細資料。';
+        return;
+    }
+
+    // 預設對應欄位：1=發票日期, 2=發票號碼, 3=總金額, 4=發票狀態, 7=商店名稱
+    const parsedItems = [];
+    for (let i = 1; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        const rawDate = cols[1] || '';
+        const invoiceNo = cols[2] || '';
+        const amount = Number(String(cols[3] || '0').replaceAll(',', '')) || 0;
+        const status = cols[4] || '';
+        const storeName = cols[7] || '';
+
+        if (status === '作廢' || amount <= 0 || !rawDate) continue;
+
+        let formattedDate = rawDate.replaceAll('/', '-').slice(0, 10);
+        if (/^\d{8}$/.test(formattedDate)) {
+            formattedDate = `${formattedDate.slice(0, 4)}-${formattedDate.slice(4, 6)}-${formattedDate.slice(6, 8)}`;
+        }
+
+        const memo = storeName + (invoiceNo ? ` (${invoiceNo})` : '');
+        parsedItems.push({
+            date: formattedDate,
+            category: detectCategory(storeName),
+            amount: amount,
+            memo: memo
+        });
+    }
+
+    if (parsedItems.length === 0) {
+        statusEl.textContent = '沒有符合條件的有效發票資料可匯入。';
+        return;
+    }
+
+    statusEl.textContent = `已解析 ${parsedItems.length} 筆，正在寫入 Google 試算表...`;
+    try {
+        const res = await fetch(scriptURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'batchAdd', items: parsedItems })
+        });
+        const data = await res.json();
+        if (data.status === 'success') {
+            statusEl.textContent = `匯入完成！本次新增 ${data.inserted} 筆（已自動跳過重複資料）。`;
+            fileInput.value = '';
+            await refreshAll();
+        } else {
+            statusEl.textContent = '匯入失敗：' + (data.message || '未知錯誤');
+        }
+    } catch (err) {
+        statusEl.textContent = '連線失敗，請確認 GAS 是否已部署新版本。';
+    }
+}
+
+        
         window.addEventListener('DOMContentLoaded', function() {
             initStatsFilter();
             refreshAll();
