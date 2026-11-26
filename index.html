@@ -77,6 +77,50 @@
         </form>
     </div>
 
+
+<!-- 明細列表區塊 -->    
+<hr style="margin: 24px 0;">
+
+<!-- 本月明細列表區塊 -->
+<div id="month-section">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+    <h3 style="margin: 0;">📅 本月明細 (<span id="current-ym"></span>)</h3>
+    <button type="button" onclick="loadMonthRecords()">🔄 重新整理</button>
+  </div>
+  <div id="month-summary" style="font-weight: bold; margin-bottom: 10px; color: #2c3e50;">
+    本月總支出：0 元
+  </div>
+  <div id="records-list">載入中...</div>
+</div>
+
+<!-- 修改資料彈出視窗 -->
+<div id="edit-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999;">
+  <div style="background:#fff; width:90%; max-width:360px; margin:15% auto; padding:20px; border-radius:8px;">
+    <h4 style="margin-top:0;">✏️ 修改消費紀錄</h4>
+    <input type="hidden" id="edit-rowIndex">
+    <div style="margin-bottom:10px;">
+      <label>日期：</label><br>
+      <input type="date" id="edit-date" style="width:100%; padding:6px;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label>類別：</label><br>
+      <input type="text" id="edit-category" style="width:100%; padding:6px;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label>金額：</label><br>
+      <input type="number" id="edit-amount" style="width:100%; padding:6px;">
+    </div>
+    <div style="margin-bottom:14px;">
+      <label>備註：</label><br>
+      <input type="text" id="edit-memo" style="width:100%; padding:6px;">
+    </div>
+    <div style="text-align:right;">
+      <button type="button" onclick="closeEditModal()">取消</button>
+      <button type="button" onclick="submitEdit()" style="background:#28a745; color:#fff; border:none; padding:6px 14px; border-radius:4px;">儲存修改</button>
+    </div>
+  </div>
+</div>
+<!-- 明細列表區塊 -->    
     <!-- 固定支出清單預覽 -->
 
     <!-- 固定支出清單預覽 end -->
@@ -178,6 +222,126 @@
             .catch(error => alert('發生錯誤：' + error));
         });
 
+//new
+// 取得當下年月，格式 YYYY-MM
+function getCurrentYearMonth() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+// 讀取本月明細
+async function loadMonthRecords() {
+  const ym = getCurrentYearMonth();
+  document.getElementById('current-ym').textContent = ym;
+  const listDiv = document.getElementById('records-list');
+  listDiv.innerHTML = '讀取中...';
+
+  try {
+    const res = await fetch(scriptURL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'getMonth', yearMonth: ym })
+    });
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      renderRecords(data.records);
+    } else {
+      listDiv.innerHTML = '讀取失敗：' + data.message;
+    }
+  } catch (err) {
+    listDiv.innerHTML = '連線錯誤，請確認網路或部署網址';
+  }
+}
+
+// 渲染明細卡片與加總
+function renderRecords(records) {
+  const listDiv = document.getElementById('records-list');
+  const summaryDiv = document.getElementById('month-summary');
+
+  if (!records || records.length === 0) {
+    summaryDiv.textContent = '本月總支出：0 元';
+    listDiv.innerHTML = '<p style="color:#888;">本月尚無消費紀錄</p>';
+    return;
+  }
+
+  let total = 0;
+  let html = '';
+
+  records.forEach(item => {
+    total += item.amount;
+    // 將單引號轉義避免 onclick 屬性出錯
+    const safeCat = item.category.replace(/'/g, "\\'");
+    const safeMemo = item.memo.replace(/'/g, "\\'");
+
+    html += `
+      <div style="border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <div style="font-size:13px; color:#666;">${item.date} · <strong>${item.category}</strong></div>
+          <div style="font-size:16px; font-weight:bold; margin:2px 0;">$${item.amount}</div>
+          <div style="font-size:13px; color:#444;">${item.memo}</div>
+        </div>
+        <div style="display:flex; gap:6px;">
+          <button type="button" onclick="openEditModal(${item.rowIndex}, '${item.date}', '${safeCat}', ${item.amount}, '${safeMemo}')">修改</button>
+          <button type="button" onclick="deleteRecord(${item.rowIndex})" style="color:#d9534f;">刪除</button>
+        </div>
+      </div>
+    `;
+  });
+
+  summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
+  listDiv.innerHTML = html;
+}
+
+// 開啟修改視窗
+function openEditModal(rowIndex, date, category, amount, memo) {
+  document.getElementById('edit-rowIndex').value = rowIndex;
+  document.getElementById('edit-date').value = date;
+  document.getElementById('edit-category').value = category;
+  document.getElementById('edit-amount').value = amount;
+  document.getElementById('edit-memo').value = memo;
+  document.getElementById('edit-modal').style.display = 'block';
+}
+
+function closeEditModal() {
+  document.getElementById('edit-modal').style.display = 'none';
+}
+
+// 送出修改
+async function submitEdit() {
+  const payload = {
+    action: 'update',
+    rowIndex: document.getElementById('edit-rowIndex').value,
+    date: document.getElementById('edit-date').value,
+    category: document.getElementById('edit-category').value,
+    amount: document.getElementById('edit-amount').value,
+    memo: document.getElementById('edit-memo').value
+  };
+
+  closeEditModal();
+  document.getElementById('records-list').innerHTML = '更新中...';
+
+  await fetch(scriptURL, { method: 'POST', body: JSON.stringify(payload) });
+  loadMonthRecords(); // 更新完重新載入列表
+}
+
+// 刪除紀錄
+async function deleteRecord(rowIndex) {
+  if (!confirm('確定要刪除這筆消費紀錄嗎？')) return;
+  document.getElementById('records-list').innerHTML = '刪除中...';
+
+  await fetch(scriptURL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+  });
+  loadMonthRecords(); // 刪除後重新重新整理列表（確保後續 rowIndex 同步更新）
+}
+
+// 網頁開啟時自動載入本月明細
+window.addEventListener('DOMContentLoaded', loadMonthRecords);
+//new
+        
         // 網頁開啟時自動載入
         loadData();
     </script>
