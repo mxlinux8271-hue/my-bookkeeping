@@ -5,8 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的雲端記帳本</title>
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background-color: #f9f9f9; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 16px; background-color: #f9f9f9; color: #333; }
+        .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .nav-btn { flex: 1; padding: 10px 8px; font-size: 15px; font-weight: bold; background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 6px; cursor: pointer; }
+        .nav-btn.active { background-color: #4CAF50; color: #fff; border-color: #4CAF50; }
+        .page-view { display: none; }
+        .page-view.active { display: block; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); margin-bottom: 18px; }
         h2 { color: #333; font-size: 1.2em; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-top: 0; }
         .form-group { margin-bottom: 12px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
@@ -23,9 +28,6 @@
         .stat-card { flex: 1; background: #e8f5e9; padding: 15px; border-radius: 6px; text-align: center; }
         .stat-card h3 { margin: 0 0 5px 0; font-size: 0.9em; color: #2e7d32; }
         .stat-card p { margin: 0; font-size: 1.4em; font-weight: bold; color: #1b5e20; }
-        .record-item { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
-        .modal-box { background: #fff; width: 90%; max-width: 360px; margin: 15% auto; padding: 20px; border-radius: 8px; box-sizing: border-box; }
         .filter-row { display: flex; gap: 10px; margin-bottom: 12px; }
         .filter-row select { flex: 1; }
         .stats-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
@@ -35,118 +37,136 @@
         .bar-bg { width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .bar-fill { height: 100%; background: #4CAF50; }
         .stats-summary-bar { background: #f1f8e9; padding: 10px 12px; border-radius: 6px; font-weight: bold; color: #2e7d32; margin-bottom: 10px; }
+        .record-item { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+        .modal-box { background: #fff; width: 90%; max-width: 360px; margin: 15% auto; padding: 20px; border-radius: 8px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-    <h1 style="text-align: center; color: #2c3e50;">☁️ 我的雲端記帳本</h1>
+    <h1 style="text-align: center; color: #2c3e50; margin-top: 0;">☁️ 我的雲端記帳本</h1>
 
-    <!-- 統計總覽卡片 -->
-    <div class="card">
-        <h2>📊 數據總覽</h2>
-        <div class="stats-box">
-            <div class="stat-card">
-                <h3 id="currentMonthTitle">本月支出</h3>
-                <p id="monthTotal">NT$ 0</p>
+    <!-- 獨立頁面切換選單 -->
+    <div class="nav-tabs">
+        <button type="button" id="tab-home" class="nav-btn active" onclick="switchPage('home')">🏠 主畫面</button>
+        <button type="button" id="tab-stats" class="nav-btn" onclick="switchPage('stats')">📈 消費統計表</button>
+        <button type="button" id="tab-records" class="nav-btn" onclick="switchPage('records')">📅 本月明細</button>
+    </div>
+
+    <!-- ==================== 頁面 1：主畫面（數據總覽 + 新增記帳） ==================== -->
+    <div id="page-home" class="page-view active">
+        <div class="card">
+            <h2>📊 數據總覽</h2>
+            <div class="stats-box">
+                <div class="stat-card">
+                    <h3 id="currentMonthTitle">本月支出</h3>
+                    <p id="monthTotal">NT$ 0</p>
+                </div>
+                <div class="stat-card">
+                    <h3>今年總支出</h3>
+                    <p id="yearTotal">NT$ 0</p>
+                </div>
             </div>
-            <div class="stat-card">
-                <h3>今年總支出</h3>
-                <p id="yearTotal">NT$ 0</p>
-            </div>
+        </div>
+
+        <div class="card">
+            <h2>✍️ 新增記帳</h2>
+            <form id="expenseForm">
+                <div class="form-group">
+                    <label for="date">日期：</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label for="category">類別：</label>
+                    <select id="category">
+                        <option value="飲食">飲食</option>
+                        <option value="交通">交通</option>
+                        <option value="購物">購物</option>
+                        <option value="娛樂">娛樂</option>
+                        <option value="醫療">醫療</option>
+                        <option value="菸酒">菸酒</option>
+                        <option value="家電">家電</option>
+                        <option value="旅遊">旅遊</option>
+                        <option value="水電費">水電費</option>
+                        <option value="日用品">日用品</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="amount">金額：</label>
+                    <input type="number" id="amount" required placeholder="請輸入金額">
+                </div>
+                <div class="form-group">
+                    <label for="memo">備註：</label>
+                    <input type="text" id="memo" placeholder="例如：午餐便當">
+                </div>
+                <button type="submit" class="btn-submit">送出記帳</button>
+            </form>
         </div>
     </div>
 
-    <!-- 記帳表單 -->
-    <div class="card">
-        <h2>✍️ 新增記帳</h2>
-        <form id="expenseForm">
-            <div class="form-group">
-                <label for="date">日期：</label>
-                <input type="date" id="date" required>
+    <!-- ==================== 頁面 2：消費統計表 ==================== -->
+    <div id="page-stats" class="page-view">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-bottom: 12px;">
+                <h2 style="border: none; padding: 0; margin: 0;">📈 消費統計表</h2>
+                <button type="button" class="btn-sm" onclick="loadCustomStats()">🔄 重新整理</button>
             </div>
-            <div class="form-group">
-                <label for="category">類別：</label>
-                <select id="category">
-                    <option value="飲食">飲食</option>
-                    <option value="交通">交通</option>
-                    <option value="購物">購物</option>
-                    <option value="娛樂">娛樂</option>
-                    <option value="醫療">醫療</option>
-                    <option value="菸酒">菸酒</option>
-                    <option value="家電">家電</option>
-                    <option value="旅遊">旅遊</option>
-                    <option value="水電費">水電費</option>
-                    <option value="日用品">日用品</option>
-                    <option value="其他">其他</option>
+            <div class="filter-row">
+                <select id="statsYear" onchange="loadCustomStats()">
+                    <option value="2026">2026 年</option>
+                    <option value="2025">2025 年</option>
+                    <option value="2024">2024 年</option>
+                </select>
+                <select id="statsMonth" onchange="loadCustomStats()">
+                    <option value="ALL">整年統計</option>
+                    <option value="01">1 月</option>
+                    <option value="02">2 月</option>
+                    <option value="03">3 月</option>
+                    <option value="04">4 月</option>
+                    <option value="05">5 月</option>
+                    <option value="06">6 月</option>
+                    <option value="07">7 月</option>
+                    <option value="08">8 月</option>
+                    <option value="09">9 月</option>
+                    <option value="10">10 月</option>
+                    <option value="11">11 月</option>
+                    <option value="12">12 月</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label for="amount">金額：</label>
-                <input type="number" id="amount" required placeholder="請輸入金額">
+
+            <div id="statsSummary" class="stats-summary-bar">統計載入中...</div>
+
+            <div style="overflow-x: auto;">
+                <table class="stats-table">
+                    <thead>
+                        <tr>
+                            <th>消費類別</th>
+                            <th class="num">筆數</th>
+                            <th class="num">金額</th>
+                            <th class="num">占比</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsTableBody">
+                        <tr><td colspan="4" style="text-align:center; color:#888;">載入中...</td></tr>
+                    </tbody>
+                </table>
             </div>
-            <div class="form-group">
-                <label for="memo">備註：</label>
-                <input type="text" id="memo" placeholder="例如：午餐便當">
-            </div>
-            <button type="submit" class="btn-submit">送出記帳</button>
-        </form>
+        </div>
     </div>
 
-<!-- 自訂月/年與消費類別統計表 -->
-    <div class="card">
-        <h2>📈 消費統計表</h2>
-        <div class="filter-row">
-            <select id="statsYear" onchange="loadCustomStats()">
-                <option value="2026">2026 年</option>
-                <option value="2025">2025 年</option>
-                <option value="2024">2024 年</option>
-            </select>
-            <select id="statsMonth" onchange="loadCustomStats()">
-                <option value="ALL">整年統計</option>
-                <option value="01">1 月</option>
-                <option value="02">2 月</option>
-                <option value="03">3 月</option>
-                <option value="04">4 月</option>
-                <option value="05">5 月</option>
-                <option value="06">6 月</option>
-                <option value="07">7 月</option>
-                <option value="08">8 月</option>
-                <option value="09">9 月</option>
-                <option value="10">10 月</option>
-                <option value="11">11 月</option>
-                <option value="12">12 月</option>
-            </select>
+    <!-- ==================== 頁面 3：本月明細 ==================== -->
+    <div id="page-records" class="page-view">
+        <div class="card" id="month-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-bottom: 12px;">
+                <h2 style="border: none; padding: 0; margin: 0;">📅 本月明細 (<span id="current-ym"></span>)</h2>
+                <button type="button" class="btn-sm" onclick="loadMonthRecords()">🔄 重新整理</button>
+            </div>
+            <div id="month-summary" style="font-weight: bold; margin-bottom: 12px; color: #2c3e50;">
+                本月總支出：0 元
+            </div>
+            <div id="records-list">載入中...</div>
         </div>
-
-        <div id="statsSummary" class="stats-summary-bar">統計載入中...</div>
-
-        <div style="overflow-x: auto;">
-            <table class="stats-table">
-                <thead>
-                    <tr>
-                        <th>消費類別</th>
-                        <th class="num">筆數</th>
-                        <th class="num">金額</th>
-                        <th class="num">占比</th>
-                    </tr>
-                </thead>
-                <tbody id="statsTableBody">
-                    <tr><td colspan="4" style="text-align:center; color:#888;">載入中...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-    
-    <!-- 本月明細列表區塊 -->
-    <div class="card" id="month-section">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-bottom: 12px;">
-            <h2 style="border: none; padding: 0; margin: 0;">📅 本月明細 (<span id="current-ym"></span>)</h2>
-            <button type="button" class="btn-sm" onclick="refreshAll()">🔄 重新整理</button>
-        </div>
-        <div id="month-summary" style="font-weight: bold; margin-bottom: 12px; color: #2c3e50;">
-            本月總支出：0 元
-        </div>
-        <div id="records-list">載入中...</div>
     </div>
 
     <!-- 修改資料彈出視窗 -->
@@ -190,10 +210,20 @@
     </div>
 
     <script>
-        // 填入你最新的 GAS 網頁應用程式網址
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbyMkOhdkQi5GW2lx2ZpX5pwEkQQl9TrDuGhVla_vNKyGMbokawjAHLIAApH7e6DfzaY/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbx0FW_cfgSNEX0PV37BtfkgycpIXaCteQ5U-RmxrImWUxsEUgCuUuv6PSAzVlfZH6-g/exec';
 
         document.getElementById('date').valueAsDate = new Date();
+
+        // 切換獨立頁面
+        function switchPage(pageName) {
+            ['home', 'stats', 'records'].forEach(name => {
+                document.getElementById('page-' + name).classList.toggle('active', name === pageName);
+                document.getElementById('tab-' + name).classList.toggle('active', name === pageName);
+            });
+            if (pageName === 'stats') loadCustomStats();
+            if (pageName === 'records') loadMonthRecords();
+            if (pageName === 'home') loadData();
+        }
 
         function getCurrentYearMonth() {
             const now = new Date();
@@ -202,14 +232,29 @@
             return `${y}-${m}`;
         }
 
-        // 同步重新載入上方總覽與下方本月明細
+        function initStatsFilter() {
+            const now = new Date();
+            const y = String(now.getFullYear());
+            const m = String(now.getMonth() + 1).padStart(2, '0');
+
+            const yearSelect = document.getElementById('statsYear');
+            if (!Array.from(yearSelect.options).some(opt => opt.value === y)) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.text = `${y} 年`;
+                yearSelect.prepend(opt);
+            }
+            yearSelect.value = y;
+            document.getElementById('statsMonth').value = m;
+        }
+
         function refreshAll() {
             loadData();
             loadMonthRecords();
-            loadCustomStats();    
+            loadCustomStats();
         }
 
-        // 載入資料並計算統計
+        // 載入主畫面數據總覽
         function loadData() {
             fetch(scriptURL, {
                 method: 'POST',
@@ -221,22 +266,22 @@
                 const records = data.records;
                 let monthTotal = 0;
                 let yearTotal = 0;
-                
+
                 const now = new Date();
                 const currentYear = now.getFullYear();
                 const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-                
+
                 document.getElementById('currentMonthTitle').innerText = `${currentYear}年${currentMonth}月支出`;
 
                 if (!records || records.length <= 1) return;
 
                 for (let i = 1; i < records.length; i++) {
                     let row = records[i];
-                    if (!row[0] || row[2] === undefined) continue; 
+                    if (!row[0] || row[2] === undefined) continue;
 
                     let rawDate = String(row[0]).trim();
-                    let rowDateStr = rawDate.split('T')[0].replaceAll('/', '-'); 
-                    let rowAmount = Number(row[2]) || 0;
+                    let rowDateStr = rawDate.split('T')[0].replaceAll('/', '-');
+                    let rowAmount = Number(String(row[2]).replaceAll(',', '')) || 0;
 
                     if (rowDateStr.startsWith(`${currentYear}-${currentMonth}`)) {
                         monthTotal += rowAmount;
@@ -252,10 +297,10 @@
             .catch(err => console.error('讀取資料失敗', err));
         }
 
-        // 提交記帳
+        // 提交新增記帳
         document.getElementById('expenseForm').addEventListener('submit', function(e) {
             e.preventDefault();
-            
+
             const formData = {
                 action: "add",
                 date: document.getElementById('date').value,
@@ -278,6 +323,55 @@
             })
             .catch(error => alert('發生錯誤：' + error));
         });
+
+        // 查詢指定年、月的消費類別統計
+        async function loadCustomStats() {
+            const year = document.getElementById('statsYear').value;
+            const month = document.getElementById('statsMonth').value;
+            const summaryEl = document.getElementById('statsSummary');
+            const tbodyEl = document.getElementById('statsTableBody');
+
+            const periodLabel = (month === 'ALL') ? `${year} 年全年度` : `${year} 年 ${Number(month)} 月`;
+            summaryEl.textContent = `正在統計 ${periodLabel}...`;
+            tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">計算中...</td></tr>`;
+
+            try {
+                const res = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'getStats', year: year, month: month })
+                });
+                const data = await res.json();
+
+                if (data.status !== 'success') {
+                    summaryEl.textContent = '統計讀取失敗';
+                    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">${data.message || '發生錯誤'}</td></tr>`;
+                    return;
+                }
+
+                summaryEl.textContent = `${periodLabel}總支出：NT$ ${Number(data.totalAmount || 0).toLocaleString()}（共 ${data.totalCount || 0} 筆）`;
+
+                if (!data.categories || data.categories.length === 0) {
+                    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${periodLabel}尚無消費紀錄</td></tr>`;
+                    return;
+                }
+
+                tbodyEl.innerHTML = data.categories.map(item => `
+                    <tr>
+                        <td>
+                            <strong>${item.category}</strong>
+                            <div class="bar-bg"><div class="bar-fill" style="width: ${item.percent}%;"></div></div>
+                        </td>
+                        <td class="num">${item.count}</td>
+                        <td class="num">NT$ ${Number(item.amount).toLocaleString()}</td>
+                        <td class="num">${item.percent}%</td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                summaryEl.textContent = '連線失敗';
+                tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">無法連線至後端，請確認 GAS 部署狀態</td></tr>`;
+            }
+        }
 
         // 讀取本月明細
         async function loadMonthRecords() {
@@ -304,7 +398,7 @@
             }
         }
 
-        // 渲染明細卡片與加總
+        // 渲染本月明細卡片與加總
         function renderRecords(records) {
             const listDiv = document.getElementById('records-list');
             const summaryDiv = document.getElementById('month-summary');
@@ -339,10 +433,10 @@
             });
 
             summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
-            listDiv.innerHTML = html;  
+            listDiv.innerHTML = html;
         }
 
-        // 開啟修改視窗（若試算表有自訂類別不在預設清單中，自動補入選項避免顯示空白）
+        // 開啟修改視窗
         function openEditModal(rowIndex, date, category, amount, memo) {
             document.getElementById('edit-rowIndex').value = rowIndex;
             document.getElementById('edit-date').value = date;
@@ -401,74 +495,6 @@
             refreshAll();
         }
 
-// 初始化年/月下拉選單預設值為當下年月
-function initStatsFilter() {
-    const now = new Date();
-    const y = String(now.getFullYear());
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-
-    const yearSelect = document.getElementById('statsYear');
-    if (!Array.from(yearSelect.options).some(opt => opt.value === y)) {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.text = `${y} 年`;
-        yearSelect.prepend(opt);
-    }
-    yearSelect.value = y;
-    document.getElementById('statsMonth').value = m;
-}
-
-// 查詢指定年、月的消費類別統計
-async function loadCustomStats() {
-    const year = document.getElementById('statsYear').value;
-    const month = document.getElementById('statsMonth').value;
-    const summaryEl = document.getElementById('statsSummary');
-    const tbodyEl = document.getElementById('statsTableBody');
-
-    const periodLabel = (month === 'ALL') ? `${year} 年全年度` : `${year} 年 ${Number(month)} 月`;
-    summaryEl.textContent = `正在統計 ${periodLabel}...`;
-    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">計算中...</td></tr>`;
-
-    try {
-        const res = await fetch(scriptURL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'getStats', year: year, month: month })
-        });
-        const data = await res.json();
-
-        if (data.status !== 'success') {
-            summaryEl.textContent = '統計讀取失敗';
-            tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">${data.message || '發生錯誤'}</td></tr>`;
-            return;
-        }
-
-        summaryEl.textContent = `${periodLabel}總支出：NT$ ${Number(data.totalAmount || 0).toLocaleString()}（共 ${data.totalCount || 0} 筆）`;
-
-        if (!data.categories || data.categories.length === 0) {
-            tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${periodLabel}尚無消費紀錄</td></tr>`;
-            return;
-        }
-
-        tbodyEl.innerHTML = data.categories.map(item => `
-            <tr>
-                <td>
-                    <strong>${item.category}</strong>
-                    <div class="bar-bg"><div class="bar-fill" style="width: ${item.percent}%;"></div></div>
-                </td>
-                <td class="num">${item.count}</td>
-                <td class="num">NT$ ${Number(item.amount).toLocaleString()}</td>
-                <td class="num">${item.percent}%</td>
-            </tr>
-        `).join('');
-    } catch (err) {
-        summaryEl.textContent = '連線失敗';
-        tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">無法連線至後端，請確認 GAS 部署狀態</td></tr>`;
-    }
-}
-
-        
-        // 網頁開啟時同步載入數據總覽與本月明細
         window.addEventListener('DOMContentLoaded', function() {
             initStatsFilter();
             refreshAll();
