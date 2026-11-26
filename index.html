@@ -103,18 +103,7 @@
                 <button type="submit" class="btn-submit">送出記帳</button>
             </form>
         </div>
-    </div>
-
-    <div class="card">
-        <h2>📥 手機條碼明細一鍵匯入</h2>
-        <div class="form-group">
-            <label for="csvFile">選擇財政部下載的 CSV 檔案：</label>
-            <input type="file" id="csvFile" accept=".csv,text/csv">
-        </div>
-        <button type="button" class="btn-submit" onclick="handleCsvImport()">一鍵解析並匯入</button>
-        <div id="importStatus" style="margin-top: 10px; font-size: 14px; color: #2e7d32;"></div>
-    </div>
-    
+    </div>    
     <!-- ==================== 頁面 2：消費統計表 ==================== -->
     <div id="page-stats" class="page-view">
         <div class="card">
@@ -219,6 +208,16 @@
         </div>
     </div>
 
+    <div class="card">
+        <h2>📥 手機條碼明細一鍵匯入</h2>
+        <div class="form-group">
+            <label for="csvFile">選擇財政部下載的 CSV 檔案：</label>
+            <input type="file" id="csvFile" accept=".csv,text/csv">
+        </div>
+        <button type="button" class="btn-submit" onclick="handleCsvImport()">一鍵解析並匯入</button>
+        <div id="importStatus" style="margin-top: 10px; font-size: 14px; color: #2e7d32;"></div>
+    </div>
+    
     <script>
         const scriptURL = 'https://script.google.com/macros/s/AKfycbx0FW_cfgSNEX0PV37BtfkgycpIXaCteQ5U-RmxrImWUxsEUgCuUuv6PSAzVlfZH6-g/exec';
 
