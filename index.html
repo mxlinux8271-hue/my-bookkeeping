@@ -156,12 +156,12 @@
 
         // 載入資料並計算統計
         function loadData() {
+            console.log('getData 回傳：', data);
             fetch(scriptURL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: "getData" })
             })
-            console.log('getData 回傳：', data);
             .then(response => response.json())
             .then(data => {
                 const records = data.records;
