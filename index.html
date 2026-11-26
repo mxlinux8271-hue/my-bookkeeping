@@ -285,6 +285,8 @@
 
             summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
             listDiv.innerHTML = html;
+            summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
+            document.getElementById('monthTotal').innerText = `NT$ ${total.toLocaleString()}`;
         }
 
         // 開啟修改視窗（若試算表有自訂類別不在預設清單中，自動補入選項避免顯示空白）
