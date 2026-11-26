@@ -26,6 +26,15 @@
         .record-item { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
         .modal-box { background: #fff; width: 90%; max-width: 360px; margin: 15% auto; padding: 20px; border-radius: 8px; box-sizing: border-box; }
+        .filter-row { display: flex; gap: 10px; margin-bottom: 12px; }
+        .filter-row select { flex: 1; }
+        .stats-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 14px; }
+        .stats-table th, .stats-table td { border: 1px solid #e0e0e0; padding: 8px; }
+        .stats-table th { background-color: #f4f7f4; text-align: left; }
+        .stats-table td.num, .stats-table th.num { text-align: right; }
+        .bar-bg { width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+        .bar-fill { height: 100%; background: #4CAF50; }
+        .stats-summary-bar { background: #f1f8e9; padding: 10px 12px; border-radius: 6px; font-weight: bold; color: #2e7d32; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -83,6 +92,51 @@
         </form>
     </div>
 
+<!-- 自訂月/年與消費類別統計表 -->
+    <div class="card">
+        <h2>📈 消費統計表</h2>
+        <div class="filter-row">
+            <select id="statsYear" onchange="loadCustomStats()">
+                <option value="2026">2026 年</option>
+                <option value="2025">2025 年</option>
+                <option value="2024">2024 年</option>
+            </select>
+            <select id="statsMonth" onchange="loadCustomStats()">
+                <option value="ALL">整年統計</option>
+                <option value="01">1 月</option>
+                <option value="02">2 月</option>
+                <option value="03">3 月</option>
+                <option value="04">4 月</option>
+                <option value="05">5 月</option>
+                <option value="06">6 月</option>
+                <option value="07">7 月</option>
+                <option value="08">8 月</option>
+                <option value="09">9 月</option>
+                <option value="10">10 月</option>
+                <option value="11">11 月</option>
+                <option value="12">12 月</option>
+            </select>
+        </div>
+
+        <div id="statsSummary" class="stats-summary-bar">統計載入中...</div>
+
+        <div style="overflow-x: auto;">
+            <table class="stats-table">
+                <thead>
+                    <tr>
+                        <th>消費類別</th>
+                        <th class="num">筆數</th>
+                        <th class="num">金額</th>
+                        <th class="num">占比</th>
+                    </tr>
+                </thead>
+                <tbody id="statsTableBody">
+                    <tr><td colspan="4" style="text-align:center; color:#888;">載入中...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
     <!-- 本月明細列表區塊 -->
     <div class="card" id="month-section">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-bottom: 12px;">
@@ -152,6 +206,7 @@
         function refreshAll() {
             loadData();
             loadMonthRecords();
+            loadCustomStats();    
         }
 
         // 載入資料並計算統計
@@ -346,8 +401,78 @@
             refreshAll();
         }
 
+// 初始化年/月下拉選單預設值為當下年月
+function initStatsFilter() {
+    const now = new Date();
+    const y = String(now.getFullYear());
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+
+    const yearSelect = document.getElementById('statsYear');
+    if (!Array.from(yearSelect.options).some(opt => opt.value === y)) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.text = `${y} 年`;
+        yearSelect.prepend(opt);
+    }
+    yearSelect.value = y;
+    document.getElementById('statsMonth').value = m;
+}
+
+// 查詢指定年、月的消費類別統計
+async function loadCustomStats() {
+    const year = document.getElementById('statsYear').value;
+    const month = document.getElementById('statsMonth').value;
+    const summaryEl = document.getElementById('statsSummary');
+    const tbodyEl = document.getElementById('statsTableBody');
+
+    const periodLabel = (month === 'ALL') ? `${year} 年全年度` : `${year} 年 ${Number(month)} 月`;
+    summaryEl.textContent = `正在統計 ${periodLabel}...`;
+    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">計算中...</td></tr>`;
+
+    try {
+        const res = await fetch(scriptURL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'getStats', year: year, month: month })
+        });
+        const data = await res.json();
+
+        if (data.status !== 'success') {
+            summaryEl.textContent = '統計讀取失敗';
+            tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">${data.message || '發生錯誤'}</td></tr>`;
+            return;
+        }
+
+        summaryEl.textContent = `${periodLabel}總支出：NT$ ${Number(data.totalAmount || 0).toLocaleString()}（共 ${data.totalCount || 0} 筆）`;
+
+        if (!data.categories || data.categories.length === 0) {
+            tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${periodLabel}尚無消費紀錄</td></tr>`;
+            return;
+        }
+
+        tbodyEl.innerHTML = data.categories.map(item => `
+            <tr>
+                <td>
+                    <strong>${item.category}</strong>
+                    <div class="bar-bg"><div class="bar-fill" style="width: ${item.percent}%;"></div></div>
+                </td>
+                <td class="num">${item.count}</td>
+                <td class="num">NT$ ${Number(item.amount).toLocaleString()}</td>
+                <td class="num">${item.percent}%</td>
+            </tr>
+        `).join('');
+    } catch (err) {
+        summaryEl.textContent = '連線失敗';
+        tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">無法連線至後端，請確認 GAS 部署狀態</td></tr>`;
+    }
+}
+
+        
         // 網頁開啟時同步載入數據總覽與本月明細
-        window.addEventListener('DOMContentLoaded', refreshAll);
+        window.addEventListener('DOMContentLoaded', function() {
+            initStatsFilter();
+            refreshAll();
+        });
     </script>
 </body>
 </html>
