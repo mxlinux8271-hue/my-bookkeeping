@@ -6,8 +6,8 @@
     <title>我的雲端記帳本</title>
     <style>
         body { font-family: sans-serif; max-width: 600px; margin: 20px auto; padding: 16px; background-color: #f9f9f9; color: #333; }
-        .nav-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
-        .nav-btn { flex: 1; padding: 10px 8px; font-size: 15px; font-weight: bold; background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 6px; cursor: pointer; }
+        .nav-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+        .nav-btn { flex: 1 1 calc(25% - 8px); min-width: 115px; padding: 10px 6px; font-size: 14px; font-weight: bold; background-color: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 6px; cursor: pointer; text-align: center; }
         .nav-btn.active { background-color: #4CAF50; color: #fff; border-color: #4CAF50; }
         .page-view { display: none; }
         .page-view.active { display: block; }
@@ -37,7 +37,8 @@
         .bar-bg { width: 100%; height: 8px; background: #eee; border-radius: 4px; overflow: hidden; margin-top: 4px; }
         .bar-fill { height: 100%; background: #4CAF50; }
         .stats-summary-bar { background: #f1f8e9; padding: 10px 12px; border-radius: 6px; font-weight: bold; color: #2e7d32; margin-bottom: 10px; }
-        .record-item { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; }
+        .fallback-hint { background: #fff8e1; color: #8d6e63; border: 1px solid #ffe082; padding: 8px 10px; border-radius: 6px; font-size: 13px; margin-bottom: 10px; display: none; }
+        .record-item { border: 1px solid #ddd; border-radius: 6px; padding: 12px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; background: #fff; gap: 10px; }
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
         .modal-box { background: #fff; width: 90%; max-width: 360px; margin: 15% auto; padding: 20px; border-radius: 8px; box-sizing: border-box; }
     </style>
@@ -51,6 +52,7 @@
         <button type="button" id="tab-home" class="nav-btn active" onclick="switchPage('home')">🏠 主畫面</button>
         <button type="button" id="tab-stats" class="nav-btn" onclick="switchPage('stats')">📈 消費統計表</button>
         <button type="button" id="tab-records" class="nav-btn" onclick="switchPage('records')">📅 本月明細</button>
+        <button type="button" id="tab-import" class="nav-btn" onclick="switchPage('import')">📥 條碼匯入</button>
     </div>
 
     <!-- ==================== 頁面 1：主畫面（數據總覽 + 新增記帳） ==================== -->
@@ -104,6 +106,7 @@
             </form>
         </div>
     </div>    
+
     <!-- ==================== 頁面 2：消費統計表 ==================== -->
     <div id="page-stats" class="page-view">
         <div class="card">
@@ -112,11 +115,7 @@
                 <button type="button" class="btn-sm" onclick="loadCustomStats()">🔄 重新整理</button>
             </div>
             <div class="filter-row">
-                <select id="statsYear" onchange="loadCustomStats()">
-                    <option value="2026">2026 年</option>
-                    <option value="2025">2025 年</option>
-                    <option value="2024">2024 年</option>
-                </select>
+                <select id="statsYear" onchange="loadCustomStats()"></select>
                 <select id="statsMonth" onchange="loadCustomStats()">
                     <option value="ALL">整年統計</option>
                     <option value="01">1 月</option>
@@ -134,6 +133,7 @@
                 </select>
             </div>
 
+            <div id="statsFallbackHint" class="fallback-hint"></div>
             <div id="statsSummary" class="stats-summary-bar">統計載入中...</div>
 
             <div style="overflow-x: auto;">
@@ -154,17 +154,48 @@
         </div>
     </div>
 
-    <!-- ==================== 頁面 3：本月明細 ==================== -->
+    <!-- ==================== 頁面 3：本月明細（可選最近三年任意年月） ==================== -->
     <div id="page-records" class="page-view">
         <div class="card" id="month-section">
             <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #4CAF50; padding-bottom: 5px; margin-bottom: 12px;">
-                <h2 style="border: none; padding: 0; margin: 0;">📅 本月明細 (<span id="current-ym"></span>)</h2>
+                <h2 style="border: none; padding: 0; margin: 0;">📅 消費明細 (<span id="current-ym"></span>)</h2>
                 <button type="button" class="btn-sm" onclick="loadMonthRecords()">🔄 重新整理</button>
             </div>
+            <div class="filter-row">
+                <select id="recordsYear" onchange="loadMonthRecords()"></select>
+                <select id="recordsMonth" onchange="loadMonthRecords()">
+                    <option value="01">1 月</option>
+                    <option value="02">2 月</option>
+                    <option value="03">3 月</option>
+                    <option value="04">4 月</option>
+                    <option value="05">5 月</option>
+                    <option value="06">6 月</option>
+                    <option value="07">7 月</option>
+                    <option value="08">8 月</option>
+                    <option value="09">9 月</option>
+                    <option value="10">10 月</option>
+                    <option value="11">11 月</option>
+                    <option value="12">12 月</option>
+                </select>
+            </div>
+            <div id="recordsFallbackHint" class="fallback-hint"></div>
             <div id="month-summary" style="font-weight: bold; margin-bottom: 12px; color: #2c3e50;">
-                本月總支出：0 元
+                總支出：0 元
             </div>
             <div id="records-list">載入中...</div>
+        </div>
+    </div>
+
+    <!-- ==================== 頁面 4：手機條碼明細一鍵匯入 ==================== -->
+    <div id="page-import" class="page-view">
+        <div class="card">
+            <h2>📥 手機條碼明細一鍵匯入</h2>
+            <div class="form-group">
+                <label for="csvFile">選擇財政部下載的 CSV 檔案：</label>
+                <input type="file" id="csvFile" accept=".csv,text/csv">
+            </div>
+            <button type="button" class="btn-submit" onclick="handleCsvImport()">一鍵解析並匯入</button>
+            <div id="importStatus" style="margin-top: 10px; font-size: 14px; color: #2e7d32;"></div>
         </div>
     </div>
 
@@ -207,25 +238,37 @@
             </div>
         </div>
     </div>
-
-    <div class="card">
-        <h2>📥 手機條碼明細一鍵匯入</h2>
-        <div class="form-group">
-            <label for="csvFile">選擇財政部下載的 CSV 檔案：</label>
-            <input type="file" id="csvFile" accept=".csv,text/csv">
-        </div>
-        <button type="button" class="btn-submit" onclick="handleCsvImport()">一鍵解析並匯入</button>
-        <div id="importStatus" style="margin-top: 10px; font-size: 14px; color: #2e7d32;"></div>
-    </div>
     
     <script>
         const scriptURL = 'https://script.google.com/macros/s/AKfycbx0FW_cfgSNEX0PV37BtfkgycpIXaCteQ5U-RmxrImWUxsEUgCuUuv6PSAzVlfZH6-g/exec';
+        const RECENT_YEARS_COUNT = 3; // 統計與明細年份下拉選單顯示最近 N 年
+        let currentRenderedRecords = [];
 
         document.getElementById('date').valueAsDate = new Date();
 
+        // HTML 字元跳脫（防止備註含引號或特殊字元破壞版面）
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        // 日期統一正規化為 yyyy-MM-dd
+        function normalizeDateStr(raw) {
+            const s = String(raw || '').trim().split('T')[0].replace(/\//g, '-');
+            const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+            if (m) {
+                return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+            }
+            return s.slice(0, 10);
+        }
+
         // 切換獨立頁面
         function switchPage(pageName) {
-            ['home', 'stats', 'records'].forEach(name => {
+            ['home', 'stats', 'records', 'import'].forEach(name => {
                 document.getElementById('page-' + name).classList.toggle('active', name === pageName);
                 document.getElementById('tab-' + name).classList.toggle('active', name === pageName);
             });
@@ -234,27 +277,33 @@
             if (pageName === 'home') loadData();
         }
 
-        function getCurrentYearMonth() {
-            const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            return `${y}-${m}`;
+        // 動態產生最近 N 年選項
+        function populateRecentYears(selectId, defaultYear) {
+            const selectEl = document.getElementById(selectId);
+            const currentYear = new Date().getFullYear();
+            selectEl.innerHTML = '';
+
+            for (let i = 0; i < RECENT_YEARS_COUNT; i++) {
+                const y = String(currentYear - i);
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.text = `${y} 年`;
+                selectEl.appendChild(opt);
+            }
+            selectEl.value = String(defaultYear || currentYear);
         }
 
-        function initStatsFilter() {
+        // 初始化「消費統計表」與「本月明細」的年月篩選器
+        function initFilters() {
             const now = new Date();
             const y = String(now.getFullYear());
             const m = String(now.getMonth() + 1).padStart(2, '0');
 
-            const yearSelect = document.getElementById('statsYear');
-            if (!Array.from(yearSelect.options).some(opt => opt.value === y)) {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.text = `${y} 年`;
-                yearSelect.prepend(opt);
-            }
-            yearSelect.value = y;
+            populateRecentYears('statsYear', y);
             document.getElementById('statsMonth').value = m;
+
+            populateRecentYears('recordsYear', y);
+            document.getElementById('recordsMonth').value = m;
         }
 
         function refreshAll() {
@@ -263,42 +312,54 @@
             loadCustomStats();
         }
 
-        // 載入主畫面數據總覽
-        function loadData() {
-            fetch(scriptURL, {
+        // 取得全部資料（供總覽與備援運算使用）
+        async function fetchAllRecordsNormalized() {
+            const res = await fetch(scriptURL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({ action: "getData" })
-            })
-            .then(response => response.json())
-            .then(data => {
-                const records = data.records;
+            });
+            const data = await res.json();
+            const rows = data.records || [];
+            const list = [];
+
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                if (!row || !row[0] || row[2] === undefined) continue;
+                const dateStr = normalizeDateStr(row[0]);
+                const amount = Number(String(row[2]).replace(/,/g, '')) || 0;
+                list.push({
+                    rowIndex: i + 1,
+                    date: dateStr,
+                    category: String(row[1] || '其他').trim() || '其他',
+                    amount: amount,
+                    memo: String(row[3] || '').trim()
+                });
+            }
+            return list;
+        }
+
+        // 載入主畫面數據總覽
+        function loadData() {
+            fetchAllRecordsNormalized()
+            .then(records => {
                 let monthTotal = 0;
                 let yearTotal = 0;
 
                 const now = new Date();
-                const currentYear = now.getFullYear();
+                const currentYear = String(now.getFullYear());
                 const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
 
                 document.getElementById('currentMonthTitle').innerText = `${currentYear}年${currentMonth}月支出`;
 
-                if (!records || records.length <= 1) return;
-
-                for (let i = 1; i < records.length; i++) {
-                    let row = records[i];
-                    if (!row[0] || row[2] === undefined) continue;
-
-                    let rawDate = String(row[0]).trim();
-                    let rowDateStr = rawDate.split('T')[0].replaceAll('/', '-');
-                    let rowAmount = Number(String(row[2]).replaceAll(',', '')) || 0;
-
-                    if (rowDateStr.startsWith(`${currentYear}-${currentMonth}`)) {
-                        monthTotal += rowAmount;
+                records.forEach(item => {
+                    if (item.date.startsWith(`${currentYear}-${currentMonth}`)) {
+                        monthTotal += item.amount;
                     }
-                    if (rowDateStr.startsWith(`${currentYear}`)) {
-                        yearTotal += rowAmount;
+                    if (item.date.startsWith(`${currentYear}-`)) {
+                        yearTotal += item.amount;
                     }
-                }
+                });
 
                 document.getElementById('monthTotal').innerText = `NT$ ${monthTotal.toLocaleString()}`;
                 document.getElementById('yearTotal').innerText = `NT$ ${yearTotal.toLocaleString()}`;
@@ -333,14 +394,41 @@
             .catch(error => alert('發生錯誤：' + error));
         });
 
+        // 渲染統計表
+        function renderStatsTable(periodLabel, totalAmount, totalCount, categories) {
+            const summaryEl = document.getElementById('statsSummary');
+            const tbodyEl = document.getElementById('statsTableBody');
+
+            summaryEl.textContent = `${periodLabel}總支出：NT$ ${Number(totalAmount || 0).toLocaleString()}（共 ${totalCount || 0} 筆）`;
+
+            if (!categories || categories.length === 0) {
+                tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${escapeHtml(periodLabel)}尚無消費紀錄</td></tr>`;
+                return;
+            }
+
+            tbodyEl.innerHTML = categories.map(item => `
+                <tr>
+                    <td>
+                        <strong>${escapeHtml(item.category)}</strong>
+                        <div class="bar-bg"><div class="bar-fill" style="width: ${item.percent}%;"></div></div>
+                    </td>
+                    <td class="num">${item.count}</td>
+                    <td class="num">NT$ ${Number(item.amount).toLocaleString()}</td>
+                    <td class="num">${item.percent}%</td>
+                </tr>
+            `).join('');
+        }
+
         // 查詢指定年、月的消費類別統計
         async function loadCustomStats() {
             const year = document.getElementById('statsYear').value;
             const month = document.getElementById('statsMonth').value;
             const summaryEl = document.getElementById('statsSummary');
             const tbodyEl = document.getElementById('statsTableBody');
+            const hintEl = document.getElementById('statsFallbackHint');
 
             const periodLabel = (month === 'ALL') ? `${year} 年全年度` : `${year} 年 ${Number(month)} 月`;
+            hintEl.style.display = 'none';
             summaryEl.textContent = `正在統計 ${periodLabel}...`;
             tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">計算中...</td></tr>`;
 
@@ -352,41 +440,58 @@
                 });
                 const data = await res.json();
 
-                if (data.status !== 'success') {
-                    summaryEl.textContent = '統計讀取失敗';
-                    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">${data.message || '發生錯誤'}</td></tr>`;
+                if (data.status === 'success') {
+                    renderStatsTable(periodLabel, data.totalAmount, data.totalCount, data.categories);
                     return;
                 }
-
-                summaryEl.textContent = `${periodLabel}總支出：NT$ ${Number(data.totalAmount || 0).toLocaleString()}（共 ${data.totalCount || 0} 筆）`;
-
-                if (!data.categories || data.categories.length === 0) {
-                    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#888;">${periodLabel}尚無消費紀錄</td></tr>`;
-                    return;
-                }
-
-                tbodyEl.innerHTML = data.categories.map(item => `
-                    <tr>
-                        <td>
-                            <strong>${item.category}</strong>
-                            <div class="bar-bg"><div class="bar-fill" style="width: ${item.percent}%;"></div></div>
-                        </td>
-                        <td class="num">${item.count}</td>
-                        <td class="num">NT$ ${Number(item.amount).toLocaleString()}</td>
-                        <td class="num">${item.percent}%</td>
-                    </tr>
-                `).join('');
+                throw new Error(data.message || '後端回傳錯誤');
             } catch (err) {
-                summaryEl.textContent = '連線失敗';
-                tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">無法連線至後端，請確認 GAS 部署狀態</td></tr>`;
+                // 若 GAS getStats 異常或尚未部署新版本，改用 getData 備援計算
+                try {
+                    const all = await fetchAllRecordsNormalized();
+                    const prefix = (month === 'ALL') ? `${year}-` : `${year}-${month}-`;
+                    const map = {};
+                    let totalAmount = 0;
+                    let totalCount = 0;
+
+                    all.forEach(item => {
+                        if (item.date.startsWith(prefix)) {
+                            if (!map[item.category]) map[item.category] = { category: item.category, amount: 0, count: 0 };
+                            map[item.category].amount += item.amount;
+                            map[item.category].count += 1;
+                            totalAmount += item.amount;
+                            totalCount += 1;
+                        }
+                    });
+
+                    const categories = Object.values(map)
+                        .map(c => ({
+                            ...c,
+                            percent: totalAmount > 0 ? ((c.amount / totalAmount) * 100).toFixed(1) : '0.0'
+                        }))
+                        .sort((a, b) => b.amount - a.amount);
+
+                    hintEl.textContent = `⚠️ GAS getStats 未回應（${err.message}），已自動切換備援模式計算。請確認 Apps Script 已部署為「新版本」。`;
+                    hintEl.style.display = 'block';
+                    renderStatsTable(periodLabel, totalAmount, totalCount, categories);
+                } catch (fallbackErr) {
+                    summaryEl.textContent = '連線失敗';
+                    tbodyEl.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#d9534f;">無法連線至後端，請確認 GAS 部署狀態</td></tr>`;
+                }
             }
         }
 
-        // 讀取本月明細
+        // 讀取指定年月明細
         async function loadMonthRecords() {
-            const ym = getCurrentYearMonth();
+            const year = document.getElementById('recordsYear').value;
+            const month = document.getElementById('recordsMonth').value;
+            const ym = `${year}-${month}`;
+            const periodLabel = `${year} 年 ${Number(month)} 月`;
+
             document.getElementById('current-ym').textContent = ym;
             const listDiv = document.getElementById('records-list');
+            const hintEl = document.getElementById('recordsFallbackHint');
+            hintEl.style.display = 'none';
             listDiv.innerHTML = '讀取中...';
 
             try {
@@ -398,70 +503,83 @@
                 const data = await res.json();
 
                 if (data.status === 'success') {
-                    renderRecords(data.records);
-                } else {
-                    listDiv.innerHTML = '讀取失敗：' + data.message;
+                    renderRecords(data.records, periodLabel);
+                    return;
                 }
+                throw new Error(data.message || '後端回傳錯誤');
             } catch (err) {
-                listDiv.innerHTML = '連線錯誤，請確認網路或 GAS 是否已部署新版本';
+                // 若 GAS getMonth 異常或尚未部署新版本，改用 getData 備援讀取
+                try {
+                    const all = await fetchAllRecordsNormalized();
+                    const filtered = all
+                        .filter(item => item.date.startsWith(ym))
+                        .sort((a, b) => b.date.localeCompare(a.date) || b.rowIndex - a.rowIndex);
+
+                    hintEl.textContent = `⚠️ GAS getMonth 未回應（${err.message}），已自動切換備援模式顯示。若需修改／刪除，請確認 Apps Script 已部署為「新版本」。`;
+                    hintEl.style.display = 'block';
+                    renderRecords(filtered, periodLabel);
+                } catch (fallbackErr) {
+                    listDiv.innerHTML = '連線錯誤，請確認網路或 GAS 是否已部署新版本';
+                }
             }
         }
 
-        // 渲染本月明細卡片與加總
-        function renderRecords(records) {
+        // 渲染明細卡片與加總
+        function renderRecords(records, periodLabel) {
             const listDiv = document.getElementById('records-list');
             const summaryDiv = document.getElementById('month-summary');
+            currentRenderedRecords = records || [];
 
-            if (!records || records.length === 0) {
-                summaryDiv.textContent = '本月總支出：0 元';
-                listDiv.innerHTML = '<p style="color:#888;">本月尚無消費紀錄</p>';
+            if (currentRenderedRecords.length === 0) {
+                summaryDiv.textContent = `${periodLabel}總支出：0 元`;
+                listDiv.innerHTML = `<p style="color:#888;">${escapeHtml(periodLabel)}尚無消費紀錄</p>`;
                 return;
             }
 
             let total = 0;
             let html = '';
 
-            records.forEach(item => {
-                total += item.amount;
-                const safeCat = item.category.replace(/'/g, "\\'");
-                const safeMemo = item.memo.replace(/'/g, "\\'");
-
+            currentRenderedRecords.forEach((item, idx) => {
+                total += Number(item.amount) || 0;
                 html += `
                     <div class="record-item">
                         <div>
-                            <div style="font-size:13px; color:#666;">${item.date} · <strong>${item.category}</strong></div>
-                            <div style="font-size:16px; font-weight:bold; margin:2px 0;">NT$ ${item.amount.toLocaleString()}</div>
-                            <div style="font-size:13px; color:#444;">${item.memo}</div>
+                            <div style="font-size:13px; color:#666;">${escapeHtml(item.date)} · <strong>${escapeHtml(item.category)}</strong></div>
+                            <div style="font-size:16px; font-weight:bold; margin:2px 0;">NT$ ${Number(item.amount).toLocaleString()}</div>
+                            <div style="font-size:13px; color:#444;">${escapeHtml(item.memo)}</div>
                         </div>
                         <div style="display:flex; gap:6px; flex-shrink:0;">
-                            <button type="button" class="btn-sm" onclick="openEditModal(${item.rowIndex}, '${item.date}', '${safeCat}', ${item.amount}, '${safeMemo}')">修改</button>
+                            <button type="button" class="btn-sm" onclick="openEditModalByIndex(${idx})">修改</button>
                             <button type="button" class="btn-sm btn-del" onclick="deleteRecord(${item.rowIndex})">刪除</button>
                         </div>
                     </div>
                 `;
             });
 
-            summaryDiv.textContent = `本月總支出：${total.toLocaleString()} 元（共 ${records.length} 筆）`;
+            summaryDiv.textContent = `${periodLabel}總支出：${total.toLocaleString()} 元（共 ${currentRenderedRecords.length} 筆）`;
             listDiv.innerHTML = html;
         }
 
         // 開啟修改視窗
-        function openEditModal(rowIndex, date, category, amount, memo) {
-            document.getElementById('edit-rowIndex').value = rowIndex;
-            document.getElementById('edit-date').value = date;
+        function openEditModalByIndex(idx) {
+            const item = currentRenderedRecords[idx];
+            if (!item) return;
+
+            document.getElementById('edit-rowIndex').value = item.rowIndex;
+            document.getElementById('edit-date').value = item.date;
 
             const catSelect = document.getElementById('edit-category');
-            const exists = Array.from(catSelect.options).some(opt => opt.value === category);
-            if (!exists && category) {
+            const exists = Array.from(catSelect.options).some(opt => opt.value === item.category);
+            if (!exists && item.category) {
                 const tempOpt = document.createElement('option');
-                tempOpt.value = category;
-                tempOpt.text = category;
+                tempOpt.value = item.category;
+                tempOpt.text = item.category;
                 catSelect.add(tempOpt);
             }
-            catSelect.value = category;
+            catSelect.value = item.category;
 
-            document.getElementById('edit-amount').value = amount;
-            document.getElementById('edit-memo').value = memo;
+            document.getElementById('edit-amount').value = item.amount;
+            document.getElementById('edit-memo').value = item.memo;
             document.getElementById('edit-modal').style.display = 'block';
         }
 
@@ -504,118 +622,117 @@
             refreshAll();
         }
 
-// 依店家名稱自動分類（沿用你的關鍵字規則）
-function detectCategory(storeName) {
-    if (/7-11|統一超商|全家|萊爾富|OK|麥當勞|星巴克|餐|食/.test(storeName)) return "飲食";
-    if (/中油|台塑|加油|高鐵|台鐵|捷運|停車|Uber|悠遊卡/.test(storeName)) return "交通";
-    if (/KTV/.test(storeName)) return "娛樂";
-    if (/菸|酒/.test(storeName)) return "菸酒";
-    if (/藥局|診所|醫院/.test(storeName)) return "醫療";
-    if (/機票/.test(storeName)) return "旅遊";
-    if (/飲料|咖啡|三商/.test(storeName)) return "飲料";
-    if (/便當/.test(storeName)) return "餐點";
-    if (/尊信/.test(storeName)) return "房租";
-    if (/中華|台灣大哥大|遠傳/.test(storeName)) return "通訊";
-    if (/責任險/.test(storeName)) return "車險";
-    if (/自來水|電力/.test(storeName)) return "水電費";
-    if (/小北|鴻流/.test(storeName)) return "日用品";
-    if (/勞健保/.test(storeName)) return "勞健保費";
-    if (/富邦保險/.test(storeName)) return "富邦保費";
-    if (/全聯|家樂福|大潤發|寶雅|屈臣氏|康是美|蝦皮|露天|momo/.test(storeName)) return "購物";
-    return "其他";
-}
+        // 依店家名稱自動分類
+        function detectCategory(storeName) {
+            if (/7-11|統一超商|全家|萊爾富|OK|麥當勞|星巴克|餐|食/.test(storeName)) return "飲食";
+            if (/中油|台塑|加油|高鐵|台鐵|捷運|停車|Uber|悠遊卡/.test(storeName)) return "交通";
+            if (/KTV/.test(storeName)) return "娛樂";
+            if (/菸|酒/.test(storeName)) return "菸酒";
+            if (/藥局|診所|醫院/.test(storeName)) return "醫療";
+            if (/機票/.test(storeName)) return "旅遊";
+            if (/飲料|咖啡|三商/.test(storeName)) return "飲料";
+            if (/便當/.test(storeName)) return "餐點";
+            if (/尊信/.test(storeName)) return "房租";
+            if (/中華|台灣大哥大|遠傳/.test(storeName)) return "通訊";
+            if (/責任險/.test(storeName)) return "車險";
+            if (/自來水|電力/.test(storeName)) return "水電費";
+            if (/小北|鴻流/.test(storeName)) return "日用品";
+            if (/勞健保/.test(storeName)) return "勞健保費";
+            if (/富邦保險/.test(storeName)) return "富邦保費";
+            if (/全聯|家樂福|大潤發|寶雅|屈臣氏|康是美|蝦皮|露天|momo/.test(storeName)) return "購物";
+            return "其他";
+        }
 
-// 解析單行 CSV（支援雙引號包覆欄位）
-function parseCsvLine(line) {
-    const result = [];
-    let current = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if (ch === '"') {
-            inQuotes = !inQuotes;
-        } else if (ch === ',' && !inQuotes) {
+        // 解析單行 CSV（支援雙引號包覆欄位）
+        function parseCsvLine(line) {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const ch = line[i];
+                if (ch === '"') {
+                    inQuotes = !inQuotes;
+                } else if (ch === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else {
+                    current += ch;
+                }
+            }
             result.push(current.trim());
-            current = '';
-        } else {
-            current += ch;
-        }
-    }
-    result.push(current.trim());
-    return result;
-}
-
-// 讀取 CSV 並送出匯入
-async function handleCsvImport() {
-    const fileInput = document.getElementById('csvFile');
-    const statusEl = document.getElementById('importStatus');
-    if (!fileInput.files || fileInput.files.length === 0) {
-        alert('請先選擇 CSV 檔案！');
-        return;
-    }
-
-    statusEl.textContent = '正在解析 CSV 檔案...';
-    const text = await fileInput.files[0].text();
-    const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
-    if (lines.length <= 1) {
-        statusEl.textContent = 'CSV 檔案內沒有可匯入的明細資料。';
-        return;
-    }
-
-    // 預設對應欄位：1=發票日期, 2=發票號碼, 3=總金額, 4=發票狀態, 7=商店名稱
-    const parsedItems = [];
-    for (let i = 1; i < lines.length; i++) {
-        const cols = parseCsvLine(lines[i]);
-        const rawDate = cols[1] || '';
-        const invoiceNo = cols[2] || '';
-        const amount = Number(String(cols[3] || '0').replaceAll(',', '')) || 0;
-        const status = cols[4] || '';
-        const storeName = cols[7] || '';
-
-        if (status === '作廢' || amount <= 0 || !rawDate) continue;
-
-        let formattedDate = rawDate.replaceAll('/', '-').slice(0, 10);
-        if (/^\d{8}$/.test(formattedDate)) {
-            formattedDate = `${formattedDate.slice(0, 4)}-${formattedDate.slice(4, 6)}-${formattedDate.slice(6, 8)}`;
+            return result;
         }
 
-        const memo = storeName + (invoiceNo ? ` (${invoiceNo})` : '');
-        parsedItems.push({
-            date: formattedDate,
-            category: detectCategory(storeName),
-            amount: amount,
-            memo: memo
-        });
-    }
+        // 讀取 CSV 並送出匯入
+        async function handleCsvImport() {
+            const fileInput = document.getElementById('csvFile');
+            const statusEl = document.getElementById('importStatus');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('請先選擇 CSV 檔案！');
+                return;
+            }
 
-    if (parsedItems.length === 0) {
-        statusEl.textContent = '沒有符合條件的有效發票資料可匯入。';
-        return;
-    }
+            statusEl.textContent = '正在解析 CSV 檔案...';
+            const text = await fileInput.files[0].text();
+            const lines = text.split(/\r?\n/).filter(l => l.trim() !== '');
+            if (lines.length <= 1) {
+                statusEl.textContent = 'CSV 檔案內沒有可匯入的明細資料。';
+                return;
+            }
 
-    statusEl.textContent = `已解析 ${parsedItems.length} 筆，正在寫入 Google 試算表...`;
-    try {
-        const res = await fetch(scriptURL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'batchAdd', items: parsedItems })
-        });
-        const data = await res.json();
-        if (data.status === 'success') {
-            statusEl.textContent = `匯入完成！本次新增 ${data.inserted} 筆（已自動跳過重複資料）。`;
-            fileInput.value = '';
-            await refreshAll();
-        } else {
-            statusEl.textContent = '匯入失敗：' + (data.message || '未知錯誤');
+            // 預設對應欄位：1=發票日期, 2=發票號碼, 3=總金額, 4=發票狀態, 7=商店名稱
+            const parsedItems = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = parseCsvLine(lines[i]);
+                const rawDate = cols[1] || '';
+                const invoiceNo = cols[2] || '';
+                const amount = Number(String(cols[3] || '0').replaceAll(',', '')) || 0;
+                const status = cols[4] || '';
+                const storeName = cols[7] || '';
+
+                if (status === '作廢' || amount <= 0 || !rawDate) continue;
+
+                let formattedDate = rawDate.replaceAll('/', '-').slice(0, 10);
+                if (/^\d{8}$/.test(formattedDate)) {
+                    formattedDate = `${formattedDate.slice(0, 4)}-${formattedDate.slice(4, 6)}-${formattedDate.slice(6, 8)}`;
+                }
+
+                const memo = storeName + (invoiceNo ? ` (${invoiceNo})` : '');
+                parsedItems.push({
+                    date: formattedDate,
+                    category: detectCategory(storeName),
+                    amount: amount,
+                    memo: memo
+                });
+            }
+
+            if (parsedItems.length === 0) {
+                statusEl.textContent = '沒有符合條件的有效發票資料可匯入。';
+                return;
+            }
+
+            statusEl.textContent = `已解析 ${parsedItems.length} 筆，正在寫入 Google 試算表...`;
+            try {
+                const res = await fetch(scriptURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ action: 'batchAdd', items: parsedItems })
+                });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    statusEl.textContent = `匯入完成！本次新增 ${data.inserted} 筆（已自動跳過重複資料）。`;
+                    fileInput.value = '';
+                    await refreshAll();
+                } else {
+                    statusEl.textContent = '匯入失敗：' + (data.message || '未知錯誤');
+                }
+            } catch (err) {
+                statusEl.textContent = '連線失敗，請確認 GAS 是否已部署新版本。';
+            }
         }
-    } catch (err) {
-        statusEl.textContent = '連線失敗，請確認 GAS 是否已部署新版本。';
-    }
-}
 
-        
         window.addEventListener('DOMContentLoaded', function() {
-            initStatsFilter();
+            initFilters();
             refreshAll();
         });
     </script>
